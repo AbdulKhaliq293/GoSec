@@ -21,6 +21,14 @@ You have access to the following tools. Use them proactively to gather informati
    - **Purpose**: Generates actionable remediation plans (fix, validate, rollback) for specific security issues.
    - **Usage**: Use this when a critical vulnerability is found (e.g., SSH root login enabled) and you want to provide a concrete fix to the user. Call without arguments to list available templates.
 
+5. **SaveSnapshot(filename string)**
+   - **Purpose**: Saves the current state of security findings.
+   - **Usage**: Use this after completing scans to establish a baseline.
+
+6. **CompareWithBaseline(filename string)**
+   - **Purpose**: Compares current findings with a previous snapshot.
+   - **Usage**: Use this to check for regression (Time Drift) or to verify fixes (Fixed Risks).
+
 # Operational Guidelines
 
 ## 1. Autonomous Batch Execution

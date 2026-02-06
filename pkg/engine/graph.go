@@ -1,7 +1,9 @@
 package engine
 
 import (
+	"encoding/json"
 	"fmt"
+	"os"
 	"strings"
 	"sync"
 )
@@ -94,6 +96,94 @@ func (g *UnifiedGraph) detectRelationships() {
 			g.Findings[sshFindingIndex].RemediationHint += " [CRITICAL: Combined with Weak Crypto Policy]"
 		}
 	}
+}
+
+// GenerateSignature creates a unique string for a finding to track identity across scans
+func GenerateSignature(f Finding) string {
+	// If ID is present and looks like a UUID or Hash, use it?
+	// But AddFindings uses Asset+Category+SourceTool+Evidence. We should stick to that for consistency.
+	return fmt.Sprintf("%s|%s|%s|%s", f.SourceTool, f.Category, f.Asset, f.Evidence)
+}
+
+// SaveSnapshot saves the current graph findings to a JSON file
+func (g *UnifiedGraph) SaveSnapshot(path string) error {
+	g.mu.RLock()
+	defer g.mu.RUnlock()
+
+	data, err := json.MarshalIndent(g.Findings, "", "  ")
+	if err != nil {
+		return err
+	}
+	return os.WriteFile(path, data, 0644)
+}
+
+// LoadSnapshot loads findings from a JSON file into the graph
+func (g *UnifiedGraph) LoadSnapshot(path string) error {
+	g.mu.Lock()
+	defer g.mu.Unlock()
+
+	data, err := os.ReadFile(path)
+	if err != nil {
+		return err
+	}
+
+	var findings []Finding
+	if err := json.Unmarshal(data, &findings); err != nil {
+		return err
+	}
+
+	g.Findings = findings
+	return nil
+}
+
+// SnapshotDiff represents the difference between two scans
+type SnapshotDiff struct {
+	New       []Finding
+	Fixed     []Finding
+	Unchanged []Finding
+}
+
+// CompareSnapshot compares the current graph against a baseline graph
+func (g *UnifiedGraph) CompareSnapshot(baseline *UnifiedGraph) SnapshotDiff {
+	g.mu.RLock()
+	defer g.mu.RUnlock()
+	// baseline.mu.RLock() // Assuming baseline is static/loaded, but good practice
+	// defer baseline.mu.RUnlock()
+
+	diff := SnapshotDiff{
+		New:       make([]Finding, 0),
+		Fixed:     make([]Finding, 0),
+		Unchanged: make([]Finding, 0),
+	}
+
+	// Map baseline signatures
+	baselineMap := make(map[string]Finding)
+	for _, f := range baseline.Findings {
+		sig := GenerateSignature(f)
+		baselineMap[sig] = f
+	}
+
+	// Map current signatures
+	currentMap := make(map[string]Finding)
+	for _, f := range g.Findings {
+		sig := GenerateSignature(f)
+		currentMap[sig] = f
+
+		if _, exists := baselineMap[sig]; exists {
+			diff.Unchanged = append(diff.Unchanged, f)
+		} else {
+			diff.New = append(diff.New, f)
+		}
+	}
+
+	// Find Fixed (in baseline but not in current)
+	for sig, f := range baselineMap {
+		if _, exists := currentMap[sig]; !exists {
+			diff.Fixed = append(diff.Fixed, f)
+		}
+	}
+
+	return diff
 }
 
 // GetReport returns a text summary of the graph
