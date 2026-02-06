@@ -1,0 +1,19 @@
+id: ssh_root_login
+name: "Disable SSH Root Login"
+issue: "SSH root login enabled"
+risk: "High"
+standard: "CIS Ubuntu 5.2.8"
+description: "Disabling root login reduces the risk of brute force attacks."
+fix_command: |
+  sudo sed -i 's/^PermitRootLogin.*/PermitRootLogin no/' /etc/ssh/sshd_config
+  sudo systemctl restart sshd
+validation_command: |
+  grep "^PermitRootLogin no" /etc/ssh/sshd_config
+rollback_command: |
+  # If you have a backup:
+  # cp /var/backups/sec-agent/sshd_config.bak /etc/ssh/sshd_config
+  # sudo systemctl restart sshd
+  # Or manually revert:
+  sudo sed -i 's/^PermitRootLogin no/PermitRootLogin yes/' /etc/ssh/sshd_config
+  sudo systemctl restart sshd
+variables: []

@@ -66,11 +66,17 @@ var interactiveCmd = &cobra.Command{
 		eng := engine.NewEngine()
 		// Initialize Unified Finding Graph
 		graph := engine.NewUnifiedGraph()
+		// Initialize Remediation Engine
+		remediationEng := engine.NewRemediationEngine()
 		
 		// Determine profiles directory (assume ./profiles relative to CWD)
 		// In a real app, this might be configurable
 		if err := eng.LoadProfiles("profiles"); err != nil {
 			fmt.Printf("Warning: Failed to load compliance profiles: %v\n", err)
+		}
+		
+		if err := remediationEng.LoadTemplates("remediation_templates"); err != nil {
+			fmt.Printf("Warning: Failed to load remediation templates: %v\n", err)
 		}
 
 		// Register Tools
@@ -78,6 +84,7 @@ var interactiveCmd = &cobra.Command{
 		agent.RegisterTool(&wrappers.LynisWrapper{Graph: graph})
 		agent.RegisterTool(&wrappers.GraphViewerWrapper{Graph: graph})
 		agent.RegisterTool(&wrappers.ComplianceWrapper{Engine: eng})
+		agent.RegisterTool(&wrappers.RemediationWrapper{Engine: remediationEng})
 
 		// Set System Prompt
 		agent.SetSystemPrompt(adk.GetSystemPrompt())
