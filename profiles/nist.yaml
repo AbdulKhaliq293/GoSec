@@ -1,20 +1,58 @@
 standard: "NIST-800-53"
-description: "NIST Special Publication 800-53 Rev. 5 - Security and Privacy Controls"
+description: "NIST Special Publication 800-53 Rev. 5 - Expanded Technical Controls"
 controls:
+  # --- Access Control (AC) ---
   - id: "AC-2"
     name: "Account Management"
-    description: "Manage system accounts, including creating, enabling, modifying, disabling, and removing accounts."
+    description: "Manage system accounts."
     check_tool: "script"
     command: "cut -d: -f1 /etc/passwd | sort"
     remediation: "Review user accounts regularly."
 
+  - id: "AC-6"
+    name: "Least Privilege"
+    description: "Employ the principle of least privilege."
+    check_tool: "script"
+    command: "grep '^sudo:' /etc/group"
+    remediation: "Restrict sudo access."
+
   - id: "AC-7"
     name: "Unsuccessful Logon Attempts"
-    description: "The information system enforces a limit of consecutive invalid logon attempts."
+    description: "Enforce a limit of consecutive invalid logon attempts."
     check_tool: "script"
     command: "grep 'pam_tally2' /etc/pam.d/common-auth || grep 'pam_faillock' /etc/pam.d/common-auth"
-    remediation: "Configure pam_faillock or pam_tally2 to lock accounts after failures."
+    remediation: "Configure pam_faillock to lock accounts."
 
+  - id: "AC-8"
+    name: "System Use Notification"
+    description: "Display system use notification messages (banners)."
+    check_tool: "script"
+    command: "cat /etc/issue.net"
+    remediation: "Configure a warning banner in /etc/issue.net."
+
+  - id: "AC-12"
+    name: "Session Termination"
+    description: "Automatically terminate a user session after inactivity."
+    check_tool: "script"
+    command: "grep 'ClientAliveInterval' /etc/ssh/sshd_config"
+    remediation: "Set ClientAliveInterval 300 in sshd_config."
+
+  # --- Audit and Accountability (AU) ---
+  - id: "AU-2"
+    name: "Event Logging"
+    description: "Identify the types of events that the system logs."
+    check_tool: "script"
+    command: "ls -l /var/log/syslog"
+    remediation: "Ensure syslog is active."
+
+  - id: "AU-6"
+    name: "Audit Review, Analysis, and Reporting"
+    description: "Review and analyze information system audit records."
+    check_tool: "script"
+    command: "command -v aureport >/dev/null && echo 'Found' || echo 'Missing'"
+    remediation: "Install auditd tools."
+
+  # --- Configuration Management (CM) ---
   - id: "CM-6"
     name: "Configuration Settings"
     description: "Configure the information system to provide only essential capabilities."
@@ -22,6 +60,14 @@ controls:
     command: "ls -l /etc/ssh/sshd_config"
     remediation: "Ensure configuration files are secured."
 
+  - id: "CM-7"
+    name: "Least Functionality"
+    description: "Configure the system to provide only essential capabilities."
+    check_tool: "script"
+    command: "systemctl list-units --state=running | grep -E 'avahi|cups'"
+    remediation: "Disable unnecessary services."
+
+  # --- System and Information Integrity (SI) ---
   - id: "SI-2"
     name: "Flaw Remediation"
     description: "Identify, report, and correct information system flaws."
@@ -29,9 +75,17 @@ controls:
     command: "apt-get -s upgrade | grep 'security'"
     remediation: "Install security updates immediately."
 
+  # --- System and Communications Protection (SC) ---
   - id: "SC-8"
     name: "Transmission Confidentiality and Integrity"
     description: "Protect the confidentiality and integrity of transmitted information."
     check_tool: "script"
     command: "grep 'Protocol 2' /etc/ssh/sshd_config"
     remediation: "Use only SSH Protocol 2."
+
+  - id: "SC-28"
+    name: "Protection of Information at Rest"
+    description: "Protect the confidentiality and integrity of information at rest."
+    check_tool: "script"
+    command: "lsblk -f | grep LUKS"
+    remediation: "Encrypt disks."

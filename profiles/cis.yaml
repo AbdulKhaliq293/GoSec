@@ -1,6 +1,7 @@
 standard: "CIS"
-description: "Center for Internet Security (CIS) Benchmark Level 1 - Sample Controls"
+description: "Center for Internet Security (CIS) Benchmark Level 1 - Expanded Technical Controls"
 controls:
+  # --- SSH & Access ---
   - id: "CIS-1.1.1"
     name: "Disable CRAM-MD5 in SSH"
     description: "Ensure CRAM-MD5 is disabled in SSH configuration"
@@ -10,7 +11,7 @@ controls:
 
   - id: "CIS-5.2.1"
     name: "Ensure SSH Protocol is set to 2"
-    description: "SSH Protocol 1 suffers from design flaws that allow the attacker to modify the integrity of the communication channel."
+    description: "SSH Protocol 1 suffers from design flaws."
     check_tool: "script"
     command: "grep '^Protocol 2' /etc/ssh/sshd_config || echo 'Not Found'"
     remediation: "Add 'Protocol 2' to /etc/ssh/sshd_config"
@@ -29,16 +30,83 @@ controls:
     command: "grep '^PermitRootLogin no' /etc/ssh/sshd_config"
     remediation: "Set 'PermitRootLogin no' in /etc/ssh/sshd_config"
 
+  - id: "CIS-5.4.1.1"
+    name: "Ensure Password Creation Requirements are Configured"
+    description: "Enforce strong password complexity."
+    check_tool: "script"
+    command: "grep 'minlen' /etc/security/pwquality.conf || grep 'minlen' /etc/pam.d/common-password"
+    remediation: "Set minlen=14 in /etc/security/pwquality.conf"
+
+  # --- Filesystem ---
   - id: "CIS-1.1.21"
     name: "Sticky Bit on World-Writable Directories"
     description: "Ensure sticky bit is set on all world-writable directories."
     check_tool: "script"
     command: "df --local -P | awk {'if (NR!=1) print $6'} | xargs -I '{}' find '{}' -xdev -type d \\( -perm -0002 -a ! -perm -1000 \\) 2>/dev/null"
-    remediation: "Run: df --local -P | awk {'if (NR!=1) print $6'} | xargs -I '{}' find '{}' -xdev -type d \\( -perm -0002 -a ! -perm -1000 \\) 2>/dev/null | xargs -I '{}' chmod a+t '{}'"
+    remediation: "Run chmod a+t on world-writable directories."
 
+  - id: "CIS-1.1.2"
+    name: "Ensure /tmp is configured"
+    description: "Ensure /tmp is a separate partition."
+    check_tool: "script"
+    command: "mount | grep ' /tmp '"
+    remediation: "Configure a separate partition for /tmp."
+
+  - id: "CIS-1.1.3"
+    name: "Ensure nodev option set on /tmp"
+    description: "Prevent device files in /tmp."
+    check_tool: "script"
+    command: "mount | grep ' /tmp ' | grep nodev"
+    remediation: "Add nodev to /tmp mount options."
+
+  # --- Network ---
   - id: "CIS-3.4.1"
     name: "Ensure TCP Wrappers is installed"
-    description: "TCP Wrappers provides a simple access control language for network services."
+    description: "TCP Wrappers provides a simple access control language."
     check_tool: "script"
     command: "dpkg -s tcpd > /dev/null 2>&1 && echo 'Installed' || echo 'Not Installed'"
     remediation: "Run: sudo apt-get install tcpd"
+
+  - id: "CIS-3.1.1"
+    name: "Disable IP Forwarding"
+    description: "The system should not act as a router."
+    check_tool: "script"
+    command: "sysctl net.ipv4.ip_forward | grep '0'"
+    remediation: "Set net.ipv4.ip_forward = 0 in /etc/sysctl.conf"
+
+  - id: "CIS-3.2.1"
+    name: "Ensure Packet Redirect Sending is Disabled"
+    description: "Disable ICMP redirects."
+    check_tool: "script"
+    command: "sysctl net.ipv4.conf.all.send_redirects | grep '0'"
+    remediation: "Set net.ipv4.conf.all.send_redirects = 0"
+
+  # --- Logging ---
+  - id: "CIS-4.2.1.1"
+    name: "Ensure rsyslog is installed"
+    description: "Ensure logging daemon is installed."
+    check_tool: "script"
+    command: "dpkg -s rsyslog > /dev/null 2>&1 && echo 'Installed' || echo 'Not Installed'"
+    remediation: "Install rsyslog."
+
+  - id: "CIS-4.2.4"
+    name: "Ensure permissions on log files"
+    description: "Log files should not be world-writable."
+    check_tool: "script"
+    command: "find /var/log -type f -perm /002 -ls"
+    remediation: "Remove write permissions for others on log files."
+
+  # --- Users ---
+  - id: "CIS-6.2.1"
+    name: "Ensure password fields are not empty"
+    description: "Accounts with empty passwords should not exist."
+    check_tool: "script"
+    command: "cat /etc/shadow | awk -F: '($2 == \"\" ) { print $1 \" does not have a password \"}'"
+    remediation: "Lock or set passwords for accounts with empty passwords."
+
+  - id: "CIS-6.2.2"
+    name: "Ensure no legacy '+' entries in /etc/passwd"
+    description: "Remove NIS legacy entries."
+    check_tool: "script"
+    command: "grep '^\\+:' /etc/passwd"
+    remediation: "Remove lines starting with + in /etc/passwd."
