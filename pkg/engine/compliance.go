@@ -1,9 +1,12 @@
 package engine
 
 import (
+	"context"
 	"fmt"
 	"os"
+	"os/exec"
 	"path/filepath"
+	"strings"
 
 	"gopkg.in/yaml.v3"
 )
@@ -16,6 +19,29 @@ type Control struct {
 	CheckTool   string `yaml:"check_tool"` // e.g., "nmap", "lynis", "script"
 	Command     string `yaml:"command"`
 	Remediation string `yaml:"remediation"`
+}
+
+// Execute runs the control's command and returns the result
+func (c *Control) Execute(ctx context.Context) (bool, string, error) {
+	if c.CheckTool != "script" && c.CheckTool != "nmap" {
+		return false, "Unsupported tool type: " + c.CheckTool, nil
+	}
+
+	// For simple script execution
+	cmd := exec.CommandContext(ctx, "sh", "-c", c.Command)
+	output, err := cmd.CombinedOutput()
+	
+	// Determine pass/fail based on exit code
+	passed := err == nil
+	
+	result := string(output)
+	if result == "" && passed {
+		result = "OK (No output)"
+	} else if result == "" && !passed {
+		result = "Failed (No output)"
+	}
+
+	return passed, strings.TrimSpace(result), nil
 }
 
 // Profile represents a compliance standard (e.g., HIPAA)

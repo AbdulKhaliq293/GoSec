@@ -1,9 +1,0 @@
-standard: "HIPAA"
-description: "HIPAA Technical Safeguards"
-controls:
-  - id: "HIPAA-Enc"
-    name: "Encryption"
-    description: "Check for disk encryption"
-    check_tool: "script"
-    command: "lsblk -f | grep LUKS"
-    remediation: "Enable full disk encryption."

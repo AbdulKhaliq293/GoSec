@@ -1,9 +1,0 @@
-standard: "CIS-Sample"
-description: "Sample CIS benchmarks for demonstration"
-controls:
-  - id: "CIS-1.1"
-    name: "SSH Root Login"
-    description: "Ensure SSH root login is disabled"
-    check_tool: "script"
-    command: "grep '^PermitRootLogin no' /etc/ssh/sshd_config"
-    remediation: "Set PermitRootLogin no in /etc/ssh/sshd_config"

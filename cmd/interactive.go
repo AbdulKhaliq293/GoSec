@@ -9,6 +9,7 @@ import (
 	"github.com/spf13/cobra"
 	"github.com/user/gosec-adk/pkg/adk"
 	"github.com/user/gosec-adk/pkg/config"
+	"github.com/user/gosec-adk/pkg/engine"
 	"github.com/user/gosec-adk/pkg/wrappers"
 )
 
@@ -61,9 +62,18 @@ var interactiveCmd = &cobra.Command{
 
 		agent := adk.NewAgent(provider)
 
+		// Initialize Compliance Engine
+		eng := engine.NewEngine()
+		// Determine profiles directory (assume ./profiles relative to CWD)
+		// In a real app, this might be configurable
+		if err := eng.LoadProfiles("profiles"); err != nil {
+			fmt.Printf("Warning: Failed to load compliance profiles: %v\n", err)
+		}
+
 		// Register Tools
 		agent.RegisterTool(&wrappers.NmapWrapper{})
 		agent.RegisterTool(&wrappers.LynisWrapper{})
+		agent.RegisterTool(&wrappers.ComplianceWrapper{Engine: eng})
 
 		// Start chat loop
 		scanner := bufio.NewScanner(os.Stdin)
