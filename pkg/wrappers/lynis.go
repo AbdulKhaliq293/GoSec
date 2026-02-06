@@ -4,14 +4,20 @@ import (
 	"bufio"
 	"bytes"
 	"context"
+	"crypto/md5"
+	"encoding/hex"
 	"fmt"
 	"os"
 	"os/exec"
 	"strings"
+
+	"github.com/user/gosec-adk/pkg/engine"
 )
 
 // LynisWrapper implements the Tool interface for Lynis
-type LynisWrapper struct{}
+type LynisWrapper struct{
+	Graph *engine.UnifiedGraph
+}
 
 func (l *LynisWrapper) Name() string {
 	return "RunComplianceAudit"
@@ -55,16 +61,55 @@ func (l *LynisWrapper) Execute(ctx context.Context, args map[string]interface{},
 
 	var warnings []string
 	var suggestions []string
+	var findings []engine.Finding
 
 	scanner := bufio.NewScanner(bytes.NewReader(data))
 	for scanner.Scan() {
 		line := scanner.Text()
 		if strings.HasPrefix(line, "warning[]=") {
-			warnings = append(warnings, strings.TrimPrefix(line, "warning[]="))
+			msg := strings.TrimPrefix(line, "warning[]=")
+			warnings = append(warnings, msg)
+			
+			// Add to findings
+			hash := md5.Sum([]byte(msg))
+			id := hex.EncodeToString(hash[:])
+			
+			findings = append(findings, engine.Finding{
+				ID:              "lynis-warn-" + id[:8],
+				SourceTool:      "Lynis",
+				Category:        "compliance", // Broad category
+				Severity:        6, // Normalized severity for Warnings
+				Confidence:      "High",
+				Asset:           "Localhost",
+				Evidence:        msg,
+				RemediationHint: "Check Lynis logs for specific remediation steps.",
+			})
 		}
 		if strings.HasPrefix(line, "suggestion[]=") {
-			suggestions = append(suggestions, strings.TrimPrefix(line, "suggestion[]="))
+			msg := strings.TrimPrefix(line, "suggestion[]=")
+			suggestions = append(suggestions, msg)
+
+			// Add to findings
+			hash := md5.Sum([]byte(msg))
+			id := hex.EncodeToString(hash[:])
+			
+			findings = append(findings, engine.Finding{
+				ID:              "lynis-sugg-" + id[:8],
+				SourceTool:      "Lynis",
+				Category:        "compliance",
+				Severity:        3, // Normalized severity for Suggestions
+				Confidence:      "Medium",
+				Asset:           "Localhost",
+				Evidence:        msg,
+				RemediationHint: "Consider implementing this suggestion for better hardening.",
+			})
 		}
+	}
+
+	// Populate Graph
+	if l.Graph != nil {
+		l.Graph.AddFindings(findings)
+		fmt.Printf("[UnifiedGraph] Added %d findings from Lynis audit.\n", len(findings))
 	}
 
 	// Construct a concise, high-value summary for the LLM

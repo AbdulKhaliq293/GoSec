@@ -64,6 +64,9 @@ var interactiveCmd = &cobra.Command{
 
 		// Initialize Compliance Engine
 		eng := engine.NewEngine()
+		// Initialize Unified Finding Graph
+		graph := engine.NewUnifiedGraph()
+		
 		// Determine profiles directory (assume ./profiles relative to CWD)
 		// In a real app, this might be configurable
 		if err := eng.LoadProfiles("profiles"); err != nil {
@@ -71,8 +74,9 @@ var interactiveCmd = &cobra.Command{
 		}
 
 		// Register Tools
-		agent.RegisterTool(&wrappers.NmapWrapper{})
-		agent.RegisterTool(&wrappers.LynisWrapper{})
+		agent.RegisterTool(&wrappers.NmapWrapper{Graph: graph})
+		agent.RegisterTool(&wrappers.LynisWrapper{Graph: graph})
+		agent.RegisterTool(&wrappers.GraphViewerWrapper{Graph: graph})
 		agent.RegisterTool(&wrappers.ComplianceWrapper{Engine: eng})
 
 		// Set System Prompt
