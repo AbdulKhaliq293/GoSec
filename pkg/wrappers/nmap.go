@@ -38,7 +38,7 @@ func (n *NmapWrapper) Schema() map[string]interface{} {
 	}
 }
 
-func (n *NmapWrapper) Execute(ctx context.Context, args map[string]interface{}) (string, error) {
+func (n *NmapWrapper) Execute(ctx context.Context, args map[string]interface{}, progress func(string)) (string, error) {
 	var target string
 	var ports string
 

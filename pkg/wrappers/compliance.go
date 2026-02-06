@@ -37,7 +37,7 @@ func (c *ComplianceWrapper) Schema() map[string]interface{} {
 	}
 }
 
-func (c *ComplianceWrapper) Execute(ctx context.Context, args map[string]interface{}) (string, error) {
+func (c *ComplianceWrapper) Execute(ctx context.Context, args map[string]interface{}, progress func(string)) (string, error) {
 	if c.Engine == nil {
 		return "Error: Compliance engine not initialized.", nil
 	}
@@ -79,6 +79,10 @@ func (c *ComplianceWrapper) Execute(ctx context.Context, args map[string]interfa
 		// Filter by control_id if provided
 		if controlID != "" && control.ID != controlID {
 			continue
+		}
+
+		if progress != nil {
+			progress(fmt.Sprintf("Running check %s: %s", control.ID, control.Name))
 		}
 
 		passed, output, err := control.Execute(ctx)

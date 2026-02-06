@@ -9,7 +9,7 @@ import (
 type Tool interface {
 	Name() string
 	Description() string
-	Execute(ctx context.Context, args map[string]interface{}) (string, error)
+	Execute(ctx context.Context, args map[string]interface{}, progress func(string)) (string, error)
 	Schema() map[string]interface{} // JSON schema for arguments
 }
 
@@ -52,7 +52,7 @@ func (a *Agent) RegisterTool(t Tool) {
 }
 
 // Chat sends a message to the agent and returns the response
-func (a *Agent) Chat(ctx context.Context, input string) (string, error) {
+func (a *Agent) Chat(ctx context.Context, input string, progress func(string)) (string, error) {
 	// Add user message to history
 	a.history = append(a.history, Message{Role: "user", Content: input})
 
@@ -90,7 +90,7 @@ func (a *Agent) Chat(ctx context.Context, input string) (string, error) {
 			continue
 		}
 
-		result, err := tool.Execute(ctx, toolCall.Args)
+		result, err := tool.Execute(ctx, toolCall.Args, progress)
 		if err != nil {
 			result = fmt.Sprintf("Error executing tool: %v", err)
 		}

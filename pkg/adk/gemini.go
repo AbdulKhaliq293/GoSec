@@ -58,14 +58,7 @@ func (g *GeminiProvider) GenerateResponse(ctx context.Context, history []Message
 		toolDefs = append(toolDefs, &genai.FunctionDeclaration{
 			Name:        t.Name(),
 			Description: t.Description(),
-			Parameters: &genai.Schema{
-				Type: genai.TypeObject,
-				Properties: map[string]*genai.Schema{
-					"args": {
-						Type: genai.TypeString, 
-					},
-				},
-			},
+			Parameters:  convertSchema(t.Schema()),
 		})
 	}
 
@@ -141,4 +134,54 @@ func (g *GeminiProvider) GenerateResponse(ctx context.Context, history []Message
 
 func (g *GeminiProvider) Close() {
 	g.client.Close()
+}
+
+func convertSchema(input map[string]interface{}) *genai.Schema {
+	if input == nil {
+		return nil
+	}
+
+	s := &genai.Schema{}
+
+	if t, ok := input["type"].(string); ok {
+		switch t {
+		case "string":
+			s.Type = genai.TypeString
+		case "number":
+			s.Type = genai.TypeNumber
+		case "integer":
+			s.Type = genai.TypeInteger
+		case "boolean":
+			s.Type = genai.TypeBoolean
+		case "array":
+			s.Type = genai.TypeArray
+		case "object":
+			s.Type = genai.TypeObject
+		}
+	}
+
+	if d, ok := input["description"].(string); ok {
+		s.Description = d
+	}
+
+	if props, ok := input["properties"].(map[string]interface{}); ok {
+		s.Properties = make(map[string]*genai.Schema)
+		for k, v := range props {
+			if vMap, ok := v.(map[string]interface{}); ok {
+				s.Properties[k] = convertSchema(vMap)
+			}
+		}
+	}
+
+	if req, ok := input["required"].([]string); ok {
+		s.Required = req
+	} else if reqInterface, ok := input["required"].([]interface{}); ok {
+		for _, r := range reqInterface {
+			if rStr, ok := r.(string); ok {
+				s.Required = append(s.Required, rStr)
+			}
+		}
+	}
+
+	return s
 }

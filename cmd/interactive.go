@@ -98,9 +98,12 @@ var interactiveCmd = &cobra.Command{
 			}
 
 			fmt.Print("Agent thinking... ")
-			resp, err := agent.Chat(ctx, input)
+			resp, err := agent.Chat(ctx, input, func(msg string) {
+				// Clear current line and print progress
+				fmt.Printf("\r\033[K[Progress]: %s\nAgent thinking... ", msg)
+			})
 			// Clear thinking line
-			fmt.Print("\r                  \r")
+			fmt.Print("\r\033[K")
 			
 			if err != nil {
 				fmt.Printf("Error: %v\n", err)

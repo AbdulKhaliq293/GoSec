@@ -28,7 +28,7 @@ func (l *LynisWrapper) Schema() map[string]interface{} {
 	}
 }
 
-func (l *LynisWrapper) Execute(ctx context.Context, args map[string]interface{}) (string, error) {
+func (l *LynisWrapper) Execute(ctx context.Context, args map[string]interface{}, progress func(string)) (string, error) {
 	fmt.Println("[Lynis] Starting system audit. Output will stream below:")
 
 	// Use a temporary report file to parse findings intelligently
