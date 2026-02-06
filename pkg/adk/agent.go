@@ -51,6 +51,16 @@ func (a *Agent) RegisterTool(t Tool) {
 	a.tools[t.Name()] = t
 }
 
+// SetSystemPrompt sets the system prompt for the agent
+func (a *Agent) SetSystemPrompt(prompt string) {
+	msg := Message{Role: "system", Content: prompt}
+	if len(a.history) > 0 && a.history[0].Role == "system" {
+		a.history[0] = msg
+	} else {
+		a.history = append([]Message{msg}, a.history...)
+	}
+}
+
 // Chat sends a message to the agent and returns the response
 func (a *Agent) Chat(ctx context.Context, input string, progress func(string)) (string, error) {
 	// Add user message to history

@@ -73,16 +73,21 @@ func (g *GeminiProvider) GenerateResponse(ctx context.Context, history []Message
 	var cs []*genai.Content
 	for _, msg := range history {
 		role := "user"
+		content := msg.Content
+
 		if msg.Role == "model" {
 			role = "model"
 		} else if msg.Role == "function" {
 			// Convert function output to user message so the model sees it
-			role = "user" 
+			role = "user"
+		} else if msg.Role == "system" {
+			role = "user"
+			content = "System Instruction: " + content
 		}
 
 		cs = append(cs, &genai.Content{
 			Parts: []genai.Part{
-				genai.Text(msg.Content),
+				genai.Text(content),
 			},
 			Role: role,
 		})

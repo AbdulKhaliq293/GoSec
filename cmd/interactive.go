@@ -75,6 +75,9 @@ var interactiveCmd = &cobra.Command{
 		agent.RegisterTool(&wrappers.LynisWrapper{})
 		agent.RegisterTool(&wrappers.ComplianceWrapper{Engine: eng})
 
+		// Set System Prompt
+		agent.SetSystemPrompt(adk.GetSystemPrompt())
+
 		// Start chat loop
 		scanner := bufio.NewScanner(os.Stdin)
 		fmt.Println("\n---------------------------------------------------------")
