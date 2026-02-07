@@ -87,6 +87,8 @@ var interactiveCmd = &cobra.Command{
 		agent.RegisterTool(&wrappers.RemediationWrapper{Engine: remediationEng})
 		agent.RegisterTool(&wrappers.SaveSnapshotWrapper{Graph: graph})
 		agent.RegisterTool(&wrappers.DiffSnapshotWrapper{Graph: graph})
+		agent.RegisterTool(&wrappers.GitleaksWrapper{Graph: graph})
+		agent.RegisterTool(&wrappers.NiktoWrapper{Graph: graph})
 
 		// Set System Prompt
 		agent.SetSystemPrompt(adk.GetSystemPrompt())

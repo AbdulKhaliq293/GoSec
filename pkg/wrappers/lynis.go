@@ -24,7 +24,7 @@ func (l *LynisWrapper) Name() string {
 }
 
 func (l *LynisWrapper) Description() string {
-	return "Runs a system compliance audit using Lynis. Returns a summary of warnings and suggestions."
+	return "Runs a system compliance audit on the local machine using Lynis. Returns a summary of warnings and suggestions."
 }
 
 func (l *LynisWrapper) Schema() map[string]interface{} {

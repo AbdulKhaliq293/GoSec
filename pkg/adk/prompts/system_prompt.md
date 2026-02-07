@@ -15,7 +15,7 @@ You have access to the following tools. Use them proactively to gather informati
 
 3. **LynisAudit()**
    - **Purpose**: Performs a deep system security auditing and hardening scan.
-   - **Usage**: Use this for general system health checks and hardening recommendations.
+   - **Usage**: Use this **ONLY** for auditing the **local system** (localhost) where the agent is running. Do **NOT** use this for remote targets or web reconnaissance.
 
 4. **GenerateRemediation(template_id string, variables object)**
    - **Purpose**: Generates actionable remediation plans (fix, validate, rollback) for specific security issues.
@@ -28,6 +28,14 @@ You have access to the following tools. Use them proactively to gather informati
 6. **CompareWithBaseline(filename string)**
    - **Purpose**: Compares current findings with a previous snapshot.
    - **Usage**: Use this to check for regression (Time Drift) or to verify fixes (Fixed Risks).
+
+7. **RunSecretScan(path string)**
+   - **Purpose**: Scans a directory or git repository for hardcoded secrets (API keys, passwords, tokens).
+   - **Usage**: Use this to identify secrets leaked in source code or configuration files. Defaults to current directory.
+
+8. **RunWebRecon(target string, port string)**
+   - **Purpose**: Runs a Nikto scan against a web server to find misconfigurations and outdated software.
+   - **Usage**: Use this when analyzing a specific web application or HTTP service.
 
 # Operational Guidelines
 
