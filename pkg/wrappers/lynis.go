@@ -7,6 +7,7 @@ import (
 	"crypto/md5"
 	"encoding/hex"
 	"fmt"
+	"net"
 	"os"
 	"os/exec"
 	"strings"
@@ -80,7 +81,7 @@ func (l *LynisWrapper) Execute(ctx context.Context, args map[string]interface{},
 				Category:        "compliance", // Broad category
 				Severity:        6, // Normalized severity for Warnings
 				Confidence:      "High",
-				Asset:           "Localhost",
+				Asset:           getSystemIP(),
 				Evidence:        msg,
 				RemediationHint: "Check Lynis logs for specific remediation steps.",
 			})
@@ -99,7 +100,7 @@ func (l *LynisWrapper) Execute(ctx context.Context, args map[string]interface{},
 				Category:        "compliance",
 				Severity:        3, // Normalized severity for Suggestions
 				Confidence:      "Medium",
-				Asset:           "Localhost",
+				Asset:           getSystemIP(),
 				Evidence:        msg,
 				RemediationHint: "Consider implementing this suggestion for better hardening.",
 			})
@@ -131,4 +132,16 @@ func (l *LynisWrapper) Execute(ctx context.Context, args map[string]interface{},
 	}
 
 	return summary.String(), nil
+}
+
+// Helper to get local outbound IP
+func getSystemIP() string {
+	conn, err := net.Dial("udp", "8.8.8.8:80")
+	if err != nil {
+		return "127.0.0.1"
+	}
+	defer conn.Close()
+
+	localAddr := conn.LocalAddr().(*net.UDPAddr)
+	return localAddr.IP.String()
 }

@@ -32,5 +32,22 @@ func (g *GraphViewerWrapper) Execute(ctx context.Context, args map[string]interf
 	}
 
 	report := g.Graph.GetReport()
+
+	// Run Attack Path Simulation
+	pathEngine := engine.NewAttackPathEngine(g.Graph)
+	paths := pathEngine.FindPathsToCriticalAssets()
+
+	if len(paths) > 0 {
+		report += "\n\n"
+		report += "==================================================\n"
+		report += "⚔️  ATTACK PATH SIMULATION DETECTED VULNERABLE PATHS\n"
+		report += "==================================================\n"
+		for _, path := range paths {
+			report += path.GenerateStory() + "\n"
+		}
+	} else {
+		report += "\n\n[Attack Path Engine] No complete attack paths to critical assets found (yet).\n"
+	}
+
 	return report, nil
 }

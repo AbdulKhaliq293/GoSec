@@ -102,12 +102,10 @@ func (n *NmapWrapper) Execute(ctx context.Context, args map[string]interface{}, 
 
 	// Parse XML and populate graph
 	if n.Graph != nil {
-		findings, parseErr := parseNmapXML(xmlPath)
-		if parseErr != nil {
-			fmt.Printf("Warning: Failed to parse Nmap XML: %v\n", parseErr)
+		if err := ingestNmapXML(xmlPath, n.Graph); err != nil {
+			fmt.Printf("Warning: Failed to ingest Nmap XML to Graph: %v\n", err)
 		} else {
-			n.Graph.AddFindings(findings)
-			fmt.Printf("[UnifiedGraph] Added %d findings from Nmap scan.\n", len(findings))
+			fmt.Printf("[UnifiedGraph] Successfully ingested Nmap scan data (Nodes, Edges, Findings).\n")
 		}
 	}
 
@@ -142,18 +140,27 @@ type NmapService struct {
 	Name string `xml:"name,attr"`
 }
 
-func parseNmapXML(path string) ([]engine.Finding, error) {
+func ingestNmapXML(path string, g *engine.UnifiedGraph) error {
 	data, err := os.ReadFile(path)
 	if err != nil {
-		return nil, err
+		return err
 	}
 
 	var run NmapRun
 	if err := xml.Unmarshal(data, &run); err != nil {
-		return nil, err
+		return err
 	}
 
-	var findings []engine.Finding
+	// Ensure "Attacker" node exists (The Scanner)
+	attackerNode := engine.Node{
+		ID:    "attacker",
+		Type:  "attacker",
+		Label: "External Attacker / Scanner",
+	}
+	g.AddNode(attackerNode)
+
+	var newFindings []engine.Finding
+
 	for _, host := range run.Hosts {
 		var ip string
 		for _, addr := range host.Addresses {
@@ -165,11 +172,52 @@ func parseNmapXML(path string) ([]engine.Finding, error) {
 		if ip == "" && len(host.Addresses) > 0 {
 			ip = host.Addresses[0].Addr
 		}
+		if ip == "" {
+			continue
+		}
+
+		// Create Host Node
+		hostNode := engine.Node{
+			ID:    ip,
+			Type:  "host",
+			Label: ip,
+		}
+		g.AddNode(hostNode)
+
+		// Edge: Attacker -> Host (Network Reachable)
+		g.AddEdge(engine.Edge{
+			SourceID: "attacker",
+			TargetID: ip,
+			Type:     "network_reachability",
+			Weight:   1,
+		})
 
 		for _, port := range host.Ports.Ports {
 			if port.State.State == "open" {
+				// Create Service Node
+				serviceID := fmt.Sprintf("%s:%s", ip, port.PortID)
+				serviceNode := engine.Node{
+					ID:    serviceID,
+					Type:  "service",
+					Label: fmt.Sprintf("%s/%s %s", port.PortID, port.Protocol, port.Service.Name),
+					Metadata: map[string]string{
+						"port":     port.PortID,
+						"protocol": port.Protocol,
+						"service":  port.Service.Name,
+					},
+				}
+				g.AddNode(serviceNode)
+
+				// Edge: Host -> Service (Exposes)
+				g.AddEdge(engine.Edge{
+					SourceID: ip,
+					TargetID: serviceID,
+					Type:     "exposes",
+					Weight:   1,
+				})
+
+				// Create Finding
 				severity := 5 // Default medium
-				// Heuristic: High risk ports
 				if port.PortID == "22" || port.PortID == "3389" || port.PortID == "23" {
 					severity = 8
 				}
@@ -180,13 +228,15 @@ func parseNmapXML(path string) ([]engine.Finding, error) {
 					Category:        "network",
 					Severity:        severity,
 					Confidence:      "High",
-					Asset:           ip,
+					Asset:           ip, // Link to Host Node
 					Evidence:        fmt.Sprintf("Port %s/%s is open (Service: %s)", port.PortID, port.Protocol, port.Service.Name),
 					RemediationHint: fmt.Sprintf("Verify if port %s needs to be exposed. Use firewall rules to restrict access.", port.PortID),
 				}
-				findings = append(findings, f)
+				newFindings = append(newFindings, f)
 			}
 		}
 	}
-	return findings, nil
+	
+	g.AddFindings(newFindings)
+	return nil
 }
