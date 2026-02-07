@@ -2,9 +2,11 @@ package wrappers
 
 import (
 	"bufio"
+	"bytes"
 	"context"
 	"encoding/json"
 	"fmt"
+	"io"
 	"os"
 	"os/exec"
 	"strings"
@@ -135,21 +137,29 @@ func (n *NiktoWrapper) runJsonScan(ctx context.Context, target, port string) ([]
 }
 
 func (n *NiktoWrapper) runTextScan(ctx context.Context, target, port string) ([]engine.Finding, error) {
-	fmt.Printf("[Nikto] Scanning %s on port %s (Text Mode)...\n", target, port)
+	fmt.Printf("[Nikto] Scanning %s on port %s (Text Mode)... Output will stream below:\n", target, port)
 	
 	// Run without -o/Format to get standard text output
 	cmdArgs := []string{"-h", target, "-p", port}
 	cmd := exec.CommandContext(ctx, "nikto", cmdArgs...)
 	
-	output, err := cmd.CombinedOutput()
+	var buf bytes.Buffer
+	mw := io.MultiWriter(os.Stdout, &buf)
+
+	cmd.Stdout = mw
+	cmd.Stderr = mw
+
+	err := cmd.Run()
 	if err != nil {
 		// Nikto returns non-zero on findings or errors, so we proceed to parse unless output is empty
-		if len(output) == 0 {
+		if buf.Len() == 0 {
 			return nil, fmt.Errorf("execution failed with no output: %v", err)
 		}
 	}
 
-	return parseNiktoText(string(output), target, port), nil
+	fmt.Println("[Nikto] Scan finished.")
+
+	return parseNiktoText(buf.String(), target, port), nil
 }
 
 func parseNiktoText(output, target, port string) []engine.Finding {
